@@ -14,7 +14,7 @@ services:
       # 指向本地的 LiteLLM 翻譯器 (注意這裡是 http://litellm:4000)
       - OPENAI_API_ENDPOINT=${OPENAI_API_ENDPOINT}
       # 這裡隨便填，因為 LiteLLM 會處理驗證，但不能留空
-      - OPENAI_API_KEY=any-dummy-key
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       # 指定要用的 Gemini 模型名稱
       - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL}
       # --- 關鍵修改結束 ---
