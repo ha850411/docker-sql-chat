@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # 1. SQL Chat 應用程式
+  sqlchat:
+    image: sqlchat/sqlchat:latest
+    container_name: sqlchat_app
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:sqlchat_password@sqlchat_db:5432/sqlchat
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      # --- 關鍵修改開始 ---
+      # 指向本地的 LiteLLM 翻譯器 (注意這裡是 http://litellm:4000)
+      - OPENAI_API_ENDPOINT=http://litellm:4000
+      # 這裡隨便填，因為 LiteLLM 會處理驗證，但不能留空
+      - OPENAI_API_KEY=any-dummy-key
+      # 指定要用的 Gemini 模型名稱
+      - OPENAI_CHAT_MODEL=${OPENAI_CHAT_MODEL}
+      # --- 關鍵修改結束 ---
+    depends_on:
+      - sqlchat_db
+      - litellm
+    restart: always
+    networks:
+      - sql-chat-network
+
+  # 2. SQL Chat 資料庫
+  sqlchat_db:
+    image: postgres:15-alpine
+    container_name: sqlchat_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=sqlchat_password
+      - POSTGRES_DB=sqlchat
+    volumes:
+      - sqlchat_data:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - sql-chat-network
+
+  # 3. LiteLLM (OpenAI to Gemini 翻譯器)
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm_proxy
+    ports:
+      - "4000:4000"
+    environment:
+      # 在這裡填入你的 Google Gemini API Key
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    # 啟動指令：使用 Config 檔案模式
+    command: [
+      "--config", "/app/config.yaml",
+      "--port", "4000",
+      "--drop_params"
+    ]
+    restart: always
+    networks:
+      - sql-chat-network
+
+volumes:
+  sqlchat_data:
+
+networks:
+  sql-chat-network:
+    ipam:
+      config:
+        - subnet: ${NETWORK_SUBNET}
+          gateway: ${NETWORK_GATEWAY}
