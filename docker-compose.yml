@@ -48,6 +48,7 @@ services:
     environment:
       # 在這裡填入你的 Google Gemini API Key
       - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_API_KEY_1=${GEMINI_API_KEY_1}
     volumes:
       - ./litellm_config.yaml:/app/config.yaml
     # 啟動指令：使用 Config 檔案模式
