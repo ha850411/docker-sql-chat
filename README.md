@@ -32,8 +32,9 @@ cp .env.example .env
 編輯 `.env` 檔案，最重要的設定如下：
 
 ```dotenv
-# 你的 Google Gemini API Key (必填)
+# 你的 Google Gemini API Key (必填，建議設定至少兩組以啟用輪替)
 GEMINI_API_KEY=AIzaSy...
+GEMINI_API_KEY_1=AIzaSy...
 
 # 指定給 SQL Chat 看的模型名稱 (維持 gpt-3.5-turbo 即可，LiteLLM 會自動轉譯)
 OPENAI_CHAT_MODEL=gpt-3.5-turbo
@@ -48,14 +49,23 @@ NETWORK_GATEWAY=192.168.101.1
 ```
 
 ### 3. 模型對應設定 (litellm_config.yaml)
-專案預設將 `gpt-3.5-turbo` 的請求轉發給 `gemini/gemini-flash-latest`。如果需要更改使用的 Gemini 模型，請修改 `litellm_config.yaml`：
+專案預設將 `gpt-3.5-turbo` 的請求轉發給 `gemini/gemini-flash-latest`。
+
+為了提高穩定性並避免 "429 Too Many Requests" 錯誤，我們建議配置多組 API Key。LiteLLM 會自動在這些 Key 之間進行輪替與故障轉移。請修改 `litellm_config.yaml`：
 
 ```yaml
 model_list:
-  - model_name: gpt-3.5-turbo  # SQL Chat 呼叫的假名稱
+  # 第一組 Key
+  - model_name: gpt-3.5-turbo
     litellm_params:
-      model: gemini/gemini-flash-latest # 實際使用的 Gemini 模型
+      model: gemini/gemini-flash-latest
       api_key: os.environ/GEMINI_API_KEY
+  
+  # 第二組 Key (備用，當第一組遇錯或冷卻時使用)
+  - model_name: gpt-3.5-turbo
+    litellm_params:
+      model: gemini/gemini-flash-latest
+      api_key: os.environ/GEMINI_API_KEY_1
 ```
 * **常用模型**：`gemini/gemini-pro`, `gemini/gemini-1.5-flash`
 
@@ -78,7 +88,7 @@ docker-compose up -d
 
 *   **Quota exceeded / 429 Too Many Requests**:
     *   表示您的 API Key 免費額度已用完。
-    *   解決方法：等待額度重置，或切換至 `gemini-1.5-flash` 等較輕量的模型。
+    *   解決方法：請參考設定檔範例，設定多組 `GEMINI_API_KEY` 並在 `litellm_config.yaml` 中加入對應項目來分散請求。等待額度重置，或切換至 `gemini-1.5-flash` 等較輕量的模型。
 
 *   **SQL Chat 無法連線**:
     *   確保所有容器都已正常啟動 (`docker-compose ps`)。
